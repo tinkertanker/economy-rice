@@ -120,7 +120,7 @@ export default function GroupsPanel({
         <article className="section">
           <header className="section-header">
             <div>
-              <h2>Suggested student groups</h2>
+              <h2>Suggested groups</h2>
               <p className="section-help">
                 Inspects how members are spread across roles and proposes the roles that look like student groups.
                 Applying a suggestion flips the matching roles to Group role + Receivable so the bot starts treating
@@ -227,7 +227,7 @@ export default function GroupsPanel({
 
         <article className="section">
           <header className="section-header">
-            <h2>Review participants</h2>
+            <h2>Participants</h2>
           </header>
           <div className="matrix-scroll">
             <table className="matrix-table participant-table">

@@ -232,7 +232,7 @@ export default function ShopPanel({
       ) : null}
       <article className="section">
         <header className="section-header">
-          <h2>Edit the store catalogue</h2>
+          <h2>Store catalogue</h2>
           <button className="primary-action" type="button" onClick={() => void onSaveShop()} disabled={isBusy}>
             Save Store
           </button>
