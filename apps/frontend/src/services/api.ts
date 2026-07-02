@@ -35,6 +35,7 @@ import type {
   ShopRedemption,
   ShopItemDraft,
   Submission,
+  LedgerEntry,
 } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001";
@@ -114,6 +115,28 @@ export const api = {
       return Promise.resolve(getDesignPreviewBootstrap());
     }
     return request<BootstrapPayload>("/api/bootstrap");
+  },
+  listLedger(options: { limit?: number; cursor?: string } = {}) {
+    const params = new URLSearchParams();
+    if (options.limit !== undefined) {
+      params.set("limit", String(options.limit));
+    }
+    if (options.cursor !== undefined) {
+      params.set("cursor", options.cursor);
+    }
+    const suffix = params.toString();
+    if (isDesignPreview()) {
+      const { ledger } = getDesignPreviewBootstrap();
+      const cursorIndex = options.cursor ? ledger.findIndex((entry) => entry.id === options.cursor) : -1;
+      const offset = options.cursor ? (cursorIndex >= 0 ? cursorIndex + 1 : ledger.length) : 0;
+      const limit = options.limit ?? 25;
+      const entries = ledger.slice(offset, offset + limit);
+      return Promise.resolve({
+        entries,
+        nextCursor: offset + limit < ledger.length ? entries.at(-1)?.id ?? null : null,
+      });
+    }
+    return request<{ entries: LedgerEntry[]; nextCursor: string | null }>(`/api/ledger${suffix ? `?${suffix}` : ""}`);
   },
   listGuilds() {
     if (isDesignPreview()) {

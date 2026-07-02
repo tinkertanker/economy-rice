@@ -695,6 +695,22 @@ export function createApp(params: {
     pointsBalance: group.pointsBalance,
   });
 
+  const serialiseLedgerEntry = (entry: Awaited<ReturnType<AppServices["economyService"]["getLedger"]>>[number]) => ({
+    id: entry.id,
+    type: entry.type,
+    description: entry.description,
+    createdByUsername: entry.createdByUsername,
+    createdAt: entry.createdAt.toISOString(),
+    splits: entry.splits.map((split) => ({
+      id: split.id,
+      group: {
+        displayName: split.group.displayName,
+      },
+      pointsDelta: split.pointsDelta,
+      currencyDelta: split.currencyDelta,
+    })),
+  });
+
   const serialiseShopRedemption = (
     redemption: NonNullable<Awaited<ReturnType<AppServices["shopService"]["getRedemption"]>>>,
   ) => {
@@ -1035,7 +1051,7 @@ export function createApp(params: {
         canManageAdminPages ? services.groupService.list(guildIdOf(request), { includeInactive: true }) : Promise.resolve([]),
         canManageMentorPages ? services.shopService.list(guildIdOf(request)) : Promise.resolve([]),
         canManageAdminPages ? services.listingService.list(guildIdOf(request)) : Promise.resolve([]),
-        canManageAdminPages ? services.economyService.getLedger(guildIdOf(request), 25) : Promise.resolve([]),
+        canManageAdminPages ? services.economyService.getLedger(guildIdOf(request), 26) : Promise.resolve([]),
         canManageAdminPages || canManageMentorPages
           ? params.botRuntime?.getRoles(guildIdOf(request)) ?? []
           : Promise.resolve([]),
@@ -1071,7 +1087,7 @@ export function createApp(params: {
       })),
       listings,
       leaderboard: leaderboard.map((entry) => serialiseLeaderboardEntry(entry)),
-      ledger,
+      ledger: ledger.map((entry) => serialiseLedgerEntry(entry)),
       discord: {
         roles,
         channels,
@@ -1415,8 +1431,23 @@ export function createApp(params: {
   });
 
   app.get("/api/ledger", { preHandler: requireAdmin }, async (request) => {
-    const limit = z.coerce.number().int().positive().max(100).default(25).parse((request.query as { limit?: string }).limit);
-    return services.economyService.getLedger(guildIdOf(request), limit);
+    const query = z
+      .object({
+        limit: z.coerce.number().int().positive().max(100).default(25),
+        offset: z.coerce.number().int().nonnegative().default(0),
+        cursor: z.string().min(1).optional(),
+      })
+      .parse(request.query);
+    const entries = await services.economyService.getLedger(guildIdOf(request), {
+      limit: query.limit + 1,
+      offset: query.cursor ? 0 : query.offset,
+      cursor: query.cursor,
+    });
+    const visibleEntries = entries.slice(0, query.limit);
+    return {
+      entries: visibleEntries.map((entry) => serialiseLedgerEntry(entry)),
+      nextCursor: entries.length > query.limit ? visibleEntries.at(-1)?.id ?? null : null,
+    };
   });
 
   app.get("/api/shop-items", { preHandler: requireMentor }, async (request) => {

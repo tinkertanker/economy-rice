@@ -503,21 +503,53 @@ export class EconomyService {
 
   public async getLedger(
     guildId: string,
-    limitOrOptions: number | { limit?: number; offset?: number } = 50,
+    limitOrOptions: number | { limit?: number; offset?: number; cursor?: string } = 50,
   ) {
     const options =
       typeof limitOrOptions === "number"
         ? {
             limit: limitOrOptions,
             offset: 0,
+            cursor: undefined,
           }
         : {
             limit: limitOrOptions.limit ?? 50,
             offset: limitOrOptions.offset ?? 0,
+            cursor: limitOrOptions.cursor,
           };
 
+    const cursorEntry = options.cursor
+      ? await this.prisma.ledgerEntry.findFirst({
+          where: {
+            id: options.cursor,
+            guildId,
+          },
+          select: {
+            id: true,
+            createdAt: true,
+          },
+        })
+      : null;
+
+    if (options.cursor && !cursorEntry) {
+      throw new AppError("Ledger cursor not found.", 404);
+    }
+
     const entries = await this.prisma.ledgerEntry.findMany({
-      where: { guildId },
+      where: {
+        guildId,
+        ...(cursorEntry
+          ? {
+              OR: [
+                { createdAt: { lt: cursorEntry.createdAt } },
+                {
+                  createdAt: cursorEntry.createdAt,
+                  id: { lt: cursorEntry.id },
+                },
+              ],
+            }
+          : {}),
+      },
       include: {
         splits: {
           include: {
@@ -525,8 +557,8 @@ export class EconomyService {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
-      skip: options.offset,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: cursorEntry ? 0 : options.offset,
       take: options.limit,
     });
 
