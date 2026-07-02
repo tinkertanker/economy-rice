@@ -68,7 +68,7 @@ export default function AssignmentsPanel({
     <div className="panel-stack">
       <article className="section">
         <header className="section-header">
-          <h2>Create and edit assignment prompts</h2>
+          <h2>Assignment prompts</h2>
           <button
             className="primary-action"
             type="button"
@@ -226,7 +226,7 @@ export default function AssignmentsPanel({
 
       <section className="section submissions-section">
         <header className="section-header">
-          <h2>Review student submissions</h2>
+          <h2>Submissions</h2>
           <div className="submission-filters">
             <select
               value={submissionFilter.assignmentId}

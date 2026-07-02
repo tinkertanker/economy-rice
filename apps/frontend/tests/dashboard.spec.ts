@@ -134,7 +134,7 @@ test("authenticated mentor only sees store, assignments, and leaderboard", async
   await expect(page.getByRole("tab", { name: /store/i })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tab", { name: /assignments/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /leaderboard/i })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /edit the store catalogue/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /store catalogue/i })).toBeVisible();
   await expect(page.getByRole("tab", { name: /settings/i })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: /groups/i })).toHaveCount(0);
 });
@@ -162,7 +162,7 @@ test("authenticated viewer only sees the leaderboard", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("tab", { name: /leaderboard/i })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("heading", { name: /view the leaderboard/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^leaderboard$/i })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: /points/i })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: /currency/i })).toHaveCount(0);
   await expect(page.getByText("Alpha")).toBeVisible();

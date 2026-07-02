@@ -55,10 +55,10 @@ export default function TabBar({ activeTab, onTabChange, tabs }: TabBarProps) {
               aria-selected={isActive}
               tabIndex={isActive ? 0 : -1}
               className={`tab-bar__tab${isActive ? " is-active" : ""}`}
+              title={tab.description}
               onClick={() => onTabChange(tab.id)}
             >
               <span className="tab-bar__label">{tab.label}</span>
-              <span className="tab-bar__description">{tab.description}</span>
             </button>
           );
         })}

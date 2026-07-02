@@ -249,7 +249,7 @@ export default function SettingsPanel({
       <section className="panel-stack">
         <article className="section">
           <header className="section-header">
-            <h2>Set the economy shape</h2>
+            <h2>Economy</h2>
             <button className="primary-action" type="button" onClick={() => void onSaveSettings()} disabled={isBusy}>
               Save Settings
             </button>
@@ -686,7 +686,7 @@ export default function SettingsPanel({
 
         <article className="section">
           <header className="section-header">
-            <h2>Configure the role capability matrix</h2>
+            <h2>Role capabilities</h2>
             <button className="primary-action" type="button" onClick={() => void onSaveRoles()} disabled={isBusy}>
               Save Roles
             </button>
@@ -882,7 +882,7 @@ export default function SettingsPanel({
 
         <article className="section">
           <header className="section-header">
-            <h2>React-to-reward rules</h2>
+            <h2>Reaction rewards</h2>
           </header>
           <div className="form-grid settings-form-grid">
             <ReactionRulesEditor

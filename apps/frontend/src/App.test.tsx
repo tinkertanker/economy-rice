@@ -352,7 +352,7 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: /^Fulfilment\b/i }));
 
-    expect(await screen.findByRole("heading", { name: /run the fulfilment queue/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /fulfilment queue/i })).toBeInTheDocument();
     expect(await screen.findAllByRole("button", { name: /mark fulfilled/i })).toHaveLength(2);
     expect(fetchMock).toHaveBeenLastCalledWith(
       expect.stringMatching(/\/api\/shop-redemptions$/),
@@ -526,7 +526,7 @@ describe("App", () => {
     expect(screen.queryByRole("tab", { name: /store/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: /settings/i })).not.toBeInTheDocument();
     // ActivityPanel is lazy-loaded; await the Suspense resolution before asserting its content.
-    expect(await screen.findByRole("heading", { name: /view the leaderboard/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^leaderboard$/i })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: /points/i })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /currency/i })).not.toBeInTheDocument();
     expect(screen.getByText("Alpha")).toBeInTheDocument();

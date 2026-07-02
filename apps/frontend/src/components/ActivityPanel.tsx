@@ -13,11 +13,11 @@ export default function ActivityPanel({
     <div className="panel-stack">
       <section className="section leaderboard-section">
         <header className="section-header">
-          <h2>{canViewLedger ? "Track the leaderboard and ledger" : "View the leaderboard"}</h2>
+          <h2>{canViewLedger ? "Leaderboard & ledger" : "Leaderboard"}</h2>
         </header>
 
-        <section aria-labelledby="leaderboard-heading" className="leaderboard-panel">
-          <h3 id="leaderboard-heading">Leaderboard</h3>
+        <section aria-labelledby={canViewLedger ? "leaderboard-heading" : undefined} className="leaderboard-panel">
+          {canViewLedger ? <h3 id="leaderboard-heading">Leaderboard</h3> : null}
           <div className="matrix-scroll matrix-scroll--flush">
             <table className="matrix-table leaderboard-table">
               <thead>

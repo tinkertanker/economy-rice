@@ -797,9 +797,11 @@ export default function App() {
 
   return (
     <main className="shell">
-      <div className="shell-toolbar">
-        <ThemeToggle />
-      </div>
+      {showDashboard ? null : (
+        <div className="shell-toolbar">
+          <ThemeToggle />
+        </div>
+      )}
       {showLoadingScreen ? (
         <section className="app-loading" aria-live="polite">
           <div className="app-loading__panel">
@@ -898,19 +900,24 @@ export default function App() {
                   <strong>{sessionUser.displayName}</strong>
                 </p>
               ) : null}
-              <button onClick={() => void loadBootstrap().catch(() => undefined)} disabled={isDashboardBusy}>
+              <button
+                className="topbar-action"
+                onClick={() => void loadBootstrap().catch(() => undefined)}
+                disabled={isDashboardBusy}
+              >
                 Refresh
               </button>
               {isDesignPreview() ? null : availableGuilds.length > 1 ? (
-                <button onClick={() => void handleSwitchGuild()} disabled={isDashboardBusy}>
+                <button className="topbar-action" onClick={() => void handleSwitchGuild()} disabled={isDashboardBusy}>
                   Switch server
                 </button>
               ) : null}
               {isDesignPreview() ? null : (
-                <button onClick={() => void handleLogout()} disabled={isDashboardBusy}>
+                <button className="topbar-action" onClick={() => void handleLogout()} disabled={isDashboardBusy}>
                   Sign Out
                 </button>
               )}
+              <ThemeToggle />
             </div>
           </header>
 

@@ -45,15 +45,13 @@ export default function OverviewPanel({ bootstrap, activeGuildId, onOpenGuide, o
         </div>
       </dl>
 
-      <section className="section">
-        <p className="section-help">
-          New here?{" "}
-          <button type="button" className="guide-inline-link" onClick={onOpenGuide}>
-            Open the Guide
-          </button>{" "}
-          for the class launch checklist, command reference, and setup help.
-        </p>
-      </section>
+      <p className="overview-hint">
+        New here?{" "}
+        <button type="button" className="guide-inline-link" onClick={onOpenGuide}>
+          Open the Guide
+        </button>{" "}
+        for the class launch checklist, command reference, and setup help.
+      </p>
     </div>
   );
 }

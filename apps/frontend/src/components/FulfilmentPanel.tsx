@@ -153,7 +153,7 @@ export default function FulfilmentPanel({
       <section className="section fulfilment-section">
         <header className="section-header">
           <div>
-            <h2>Run the fulfilment queue</h2>
+            <h2>Fulfilment queue</h2>
             <p className="section-help">
               Pending rows have already charged group points. Awaiting approval rows stay visible so staff
               can spot stalled requests before they turn into handover work.
