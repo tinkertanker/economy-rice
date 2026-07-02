@@ -256,6 +256,85 @@ describe("points accelerator API", () => {
     ]);
   });
 
+  it("pages ledger entries with a stable cursor", async () => {
+    await ctx.prisma.guildConfig.create({
+      data: {
+        guildId: ctx.env.GUILD_ID,
+      },
+    });
+
+    const group = await ctx.prisma.group.create({
+      data: {
+        guildId: ctx.env.GUILD_ID,
+        displayName: "Alpha",
+        slug: "alpha",
+        mentorName: null,
+        roleId: "role-alpha",
+        active: true,
+      },
+    });
+
+    const createLedgerEntry = (id: string, createdAt: Date, pointsDelta: string) =>
+      ctx.prisma.ledgerEntry.create({
+        data: {
+          id,
+          guildId: ctx.env.GUILD_ID,
+          type: "MANUAL_AWARD",
+          description: id,
+          createdByUserId: "admin",
+          createdByUsername: "Admin",
+          createdAt,
+          splits: {
+            create: {
+              groupId: group.id,
+              pointsDelta,
+              currencyDelta: "0",
+              createdAt,
+            },
+          },
+        },
+      });
+
+    const latest = new Date("2026-01-04T00:00:00.000Z");
+    const tied = new Date("2026-01-03T00:00:00.000Z");
+    const older = new Date("2026-01-02T00:00:00.000Z");
+    await createLedgerEntry("ledger-old", older, "1");
+    await createLedgerEntry("ledger-tie-a", tied, "2");
+    await createLedgerEntry("ledger-tie-z", tied, "3");
+    await createLedgerEntry("ledger-new", latest, "4");
+
+    const firstPageResponse = await ctx.app.inject({
+      method: "GET",
+      url: "/api/ledger?limit=2",
+      headers: { "x-admin-token": ctx.env.ADMIN_TOKEN },
+    });
+    expect(firstPageResponse.statusCode).toBe(200);
+    const firstPage = firstPageResponse.json() as {
+      entries: Array<{ id: string; guildId?: string; splits: Array<{ pointsDelta: number; group: { displayName: string } }> }>;
+      nextCursor: string | null;
+    };
+    expect(firstPage.entries.map((entry) => entry.id)).toEqual(["ledger-new", "ledger-tie-z"]);
+    expect(firstPage.entries[0]!.guildId).toBeUndefined();
+    expect(firstPage.entries[0]!.splits[0]!.pointsDelta).toBe(4);
+    expect(firstPage.entries[0]!.splits[0]!.group).toEqual({ displayName: "Alpha" });
+    expect(firstPage.nextCursor).toBe("ledger-tie-z");
+
+    await createLedgerEntry("ledger-newer-after-page", new Date("2026-01-05T00:00:00.000Z"), "5");
+
+    const secondPageResponse = await ctx.app.inject({
+      method: "GET",
+      url: `/api/ledger?limit=2&cursor=${firstPage.nextCursor}`,
+      headers: { "x-admin-token": ctx.env.ADMIN_TOKEN },
+    });
+    expect(secondPageResponse.statusCode).toBe(200);
+    const secondPage = secondPageResponse.json() as {
+      entries: Array<{ id: string }>;
+      nextCursor: string | null;
+    };
+    expect(secondPage.entries.map((entry) => entry.id)).toEqual(["ledger-tie-a", "ledger-old"]);
+    expect(secondPage.nextCursor).toBeNull();
+  });
+
   it("syncs groups for roles that can receive awards", async () => {
     await ctx.app.inject({
       method: "PUT",

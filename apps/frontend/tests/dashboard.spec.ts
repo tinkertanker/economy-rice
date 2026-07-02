@@ -163,10 +163,10 @@ test("authenticated viewer only sees the leaderboard", async ({ page }) => {
 
   await expect(page.getByRole("tab", { name: /leaderboard/i })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("heading", { name: /^leaderboard$/i })).toBeVisible();
-  await expect(page.getByRole("columnheader", { name: /points/i })).toBeVisible();
-  await expect(page.getByRole("columnheader", { name: /currency/i })).toHaveCount(0);
+  await expect(page.getByText("1 groups")).toBeVisible();
+  await expect(page.getByText("beans")).toBeVisible();
   await expect(page.getByText("Alpha")).toBeVisible();
-  await expect(page.getByText("99")).toBeVisible();
+  await expect(page.getByText("99").first()).toBeVisible();
   await expect(page.getByText("500")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /ledger/i })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: /store/i })).toHaveCount(0);

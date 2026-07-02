@@ -527,10 +527,10 @@ describe("App", () => {
     expect(screen.queryByRole("tab", { name: /settings/i })).not.toBeInTheDocument();
     // ActivityPanel is lazy-loaded; await the Suspense resolution before asserting its content.
     expect(await screen.findByRole("heading", { name: /^leaderboard$/i })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /points/i })).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: /currency/i })).not.toBeInTheDocument();
+    expect(screen.getByText("1 groups")).toBeInTheDocument();
+    expect(screen.getByText("beans")).toBeInTheDocument();
     expect(screen.getByText("Alpha")).toBeInTheDocument();
-    expect(screen.getByText("99")).toBeInTheDocument();
+    expect(screen.getAllByText("99").length).toBeGreaterThan(0);
     expect(screen.queryByText("500")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /ledger/i })).not.toBeInTheDocument();
   });

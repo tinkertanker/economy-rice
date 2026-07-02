@@ -15,6 +15,7 @@ import type {
   ShopRedemption,
   ShopItem,
   ShopItemDraft,
+  LedgerEntry,
 } from "./types";
 
 export function isDesignPreview(): boolean {
@@ -120,6 +121,61 @@ function createPreviewUser(accessLevel: DashboardAccessLevel): AuthSession["user
     canViewLeaderboard: true,
     activeGuildId: "preview-guild",
   };
+}
+
+function createPreviewLedger(): LedgerEntry[] {
+  const templates = [
+    {
+      type: "MANUAL_AWARD",
+      description: "Helped another group during review",
+      createdByUsername: "staff",
+      splits: [{ group: "Team Alpha", pointsDelta: 5, currencyDelta: 0 }],
+    },
+    {
+      type: "SUBMISSION_REWARD",
+      description: "Outstanding assignment submission",
+      createdByUsername: null,
+      splits: [{ group: "Team Beta", pointsDelta: 12, currencyDelta: 3 }],
+    },
+    {
+      type: "DONATION",
+      description: "Converted participant rice into group beans",
+      createdByUsername: "student",
+      splits: [{ group: "Team Alpha", pointsDelta: 10, currencyDelta: 0 }],
+    },
+    {
+      type: "TRANSFER",
+      description: "Balanced points after a team correction",
+      createdByUsername: "staff",
+      splits: [
+        { group: "Team Alpha", pointsDelta: -4, currencyDelta: 0 },
+        { group: "Team Beta", pointsDelta: 4, currencyDelta: 0 },
+      ],
+    },
+    {
+      type: "REACTION_REWARD",
+      description: "Helpful Discord reaction reward",
+      createdByUsername: null,
+      splits: [{ group: "Team Beta", pointsDelta: 1, currencyDelta: 1 }],
+    },
+  ];
+
+  return Array.from({ length: 32 }, (_, index) => {
+    const template = templates[index % templates.length]!;
+    return {
+      id: `ledger-${index + 1}`,
+      type: template.type,
+      description: template.description,
+      createdByUsername: template.createdByUsername,
+      createdAt: new Date(Date.now() - (index + 1) * 36 * 60_000).toISOString(),
+      splits: template.splits.map((split, splitIndex) => ({
+        id: `split-${index + 1}-${splitIndex + 1}`,
+        group: { displayName: split.group },
+        pointsDelta: split.pointsDelta,
+        currencyDelta: split.currencyDelta,
+      })),
+    };
+  });
 }
 
 function createInitialBootstrap(): BootstrapPayload {
@@ -407,38 +463,7 @@ function createInitialBootstrap(): BootstrapPayload {
       { id: "group-1", displayName: "Team Alpha", pointsBalance: 128 },
       { id: "group-2", displayName: "Team Beta", pointsBalance: 96 },
     ],
-    ledger: [
-      {
-        id: "ledger-1",
-        type: "AWARD",
-        description: "Helped another group during review",
-        createdByUsername: "staff",
-        createdAt: new Date(Date.now() - 3600_000).toISOString(),
-        splits: [
-          {
-            id: "split-1",
-            group: { displayName: "Team Alpha" },
-            pointsDelta: 5,
-            currencyDelta: 0,
-          },
-        ],
-      },
-      {
-        id: "ledger-2",
-        type: "PASSIVE",
-        description: "Chat participation",
-        createdByUsername: null,
-        createdAt: new Date(Date.now() - 7200_000).toISOString(),
-        splits: [
-          {
-            id: "split-2",
-            group: { displayName: "Team Beta" },
-            pointsDelta: 1,
-            currencyDelta: 1,
-          },
-        ],
-      },
-    ],
+    ledger: createPreviewLedger(),
     discord: {
       roles: [
         { id: "role-staff", name: "Staff" },
