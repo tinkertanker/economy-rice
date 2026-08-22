@@ -56,7 +56,7 @@ Useful backend commands:
 - Run `npm run build`, `npm run test`, and `npm run e2e` before handing off substantial changes.
 - If you change backend behavior, add or update Vitest coverage in `apps/backend/test`.
 - If you change dashboard flows, add or update frontend tests and Playwright coverage where practical.
-- Backend Vitest currently uses one ephemeral Postgres per test file; do not enable file-level parallelism unless the harness is isolated per worker.
+- Backend Vitest starts one ephemeral Postgres in `test/global-setup.ts` and shares it across files. Do not enable file-level parallelism unless each worker has its own database.
 - If `BootstrapPayload` changes, keep `apps/frontend/src/designPreview.ts` and Playwright bootstrap mocks in sync.
 - Prefer validating the split economy end-to-end: passive rewards, awards/deductions, `/transfer`, `/donate`, `/store`, `/buy personal`, `/buy group`, `/approve_purchase`, and `/sell`.
 - Prefer validating submission flows end-to-end as well: auto-provisioned participants, `/submit`, `/submissions`, `/missing`, `/review_submission`, and dashboard review.
