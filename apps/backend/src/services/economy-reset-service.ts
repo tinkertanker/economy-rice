@@ -414,88 +414,32 @@ export class EconomyResetService {
         }
       }
 
-      let participantCorrectionEntryId: string | null = null;
-      let groupCorrectionEntryId: string | null = null;
-      const totalCurrencyDelta =
-        participantImpact.reduce((sum, row) => sum + row.delta, 0) +
-        groupImpact.reduce((sum, row) => sum + row.currencyDelta, 0);
-      const totalPointsDelta = groupImpact.reduce((sum, row) => sum + row.pointsDelta, 0);
-
-      if (!params.dryRun) {
-        const description = params.note?.trim()
-          ? params.note.trim()
-          : `Economy reset — capped balances`;
-
-        const chunkedParticipantSplits = chunkParticipantSplits(participantSplits);
-        if (chunkedParticipantSplits.length > 0) {
-          const created = await tx.participantCurrencyEntry.create({
-            data: {
-              guildId: params.guildId,
-              type: PARTICIPANT_REVERSAL_TYPE,
-              description,
-              createdByUserId: params.actor.userId,
-              createdByUsername: params.actor.username,
-              splits: {
-                create: chunkedParticipantSplits.map((split) => ({
-                  participantId: split.participantId,
-                  currencyDelta: decimal(split.currencyDelta),
-                })),
-              },
+      const totals = sumImpact(participantImpact, groupImpact);
+      const corrections = params.dryRun
+        ? { participantCorrectionEntryId: null, groupCorrectionEntryId: null }
+        : await this.writeResetCorrections(tx, {
+            guildId: params.guildId,
+            actor: params.actor,
+            description: params.note?.trim() || "Economy reset — capped balances",
+            participantSplits,
+            groupSplits,
+            auditAction: "economy.reset.cap_balances",
+            auditPayload: {
+              maxParticipantCurrency: params.maxParticipantCurrency ?? null,
+              maxGroupPoints: params.maxGroupPoints ?? null,
+              maxGroupCurrency: params.maxGroupCurrency ?? null,
+              note: params.note ?? null,
             },
+            ...totals,
           });
-          participantCorrectionEntryId = created.id;
-        }
-
-        const chunkedGroupSplits = chunkGroupSplits(groupSplits);
-        if (chunkedGroupSplits.length > 0) {
-          const created = await tx.ledgerEntry.create({
-            data: {
-              guildId: params.guildId,
-              type: GROUP_REVERSAL_TYPE,
-              description,
-              createdByUserId: params.actor.userId,
-              createdByUsername: params.actor.username,
-              splits: {
-                create: chunkedGroupSplits.map((split) => ({
-                  groupId: split.groupId,
-                  pointsDelta: decimal(split.pointsDelta),
-                  currencyDelta: decimal(split.currencyDelta),
-                })),
-              },
-            },
-          });
-          groupCorrectionEntryId = created.id;
-        }
-
-        await this.auditService.record({
-          guildId: params.guildId,
-          actorUserId: params.actor.userId,
-          actorUsername: params.actor.username,
-          action: "economy.reset.cap_balances",
-          entityType: "EconomyReset",
-          payload: {
-            maxParticipantCurrency: params.maxParticipantCurrency ?? null,
-            maxGroupPoints: params.maxGroupPoints ?? null,
-            maxGroupCurrency: params.maxGroupCurrency ?? null,
-            participantCorrectionEntryId,
-            groupCorrectionEntryId,
-            totalCurrencyDelta,
-            totalPointsDelta,
-            note: params.note ?? null,
-          },
-          executor: tx,
-        });
-      }
 
       return {
         mode: "cap-balances",
         dryRun: params.dryRun,
         participantImpact,
         groupImpact,
-        totalCurrencyDelta,
-        totalPointsDelta,
-        participantCorrectionEntryId,
-        groupCorrectionEntryId,
+        ...totals,
+        ...corrections,
       };
     });
   }
@@ -608,79 +552,25 @@ export class EconomyResetService {
         }
       }
 
-      let participantCorrectionEntryId: string | null = null;
-      let groupCorrectionEntryId: string | null = null;
-      const totalCurrencyDelta =
-        participantImpact.reduce((sum, row) => sum + row.delta, 0) +
-        groupImpact.reduce((sum, row) => sum + row.currencyDelta, 0);
-      const totalPointsDelta = groupImpact.reduce((sum, row) => sum + row.pointsDelta, 0);
-
-      if (!params.dryRun) {
-        const description = params.note?.trim()
-          ? params.note.trim()
-          : `Economy reset — kept balances modulo ${params.modulus}`;
-
-        const chunkedParticipantSplits = chunkParticipantSplits(participantSplits);
-        if (chunkedParticipantSplits.length > 0) {
-          const created = await tx.participantCurrencyEntry.create({
-            data: {
-              guildId: params.guildId,
-              type: PARTICIPANT_REVERSAL_TYPE,
-              description,
-              createdByUserId: params.actor.userId,
-              createdByUsername: params.actor.username,
-              splits: {
-                create: chunkedParticipantSplits.map((split) => ({
-                  participantId: split.participantId,
-                  currencyDelta: decimal(split.currencyDelta),
-                })),
-              },
+      const totals = sumImpact(participantImpact, groupImpact);
+      const corrections = params.dryRun
+        ? { participantCorrectionEntryId: null, groupCorrectionEntryId: null }
+        : await this.writeResetCorrections(tx, {
+            guildId: params.guildId,
+            actor: params.actor,
+            description: params.note?.trim() || `Economy reset — kept balances modulo ${params.modulus}`,
+            participantSplits,
+            groupSplits,
+            auditAction: "economy.reset.modulo_balances",
+            auditPayload: {
+              modulus: params.modulus,
+              applyToParticipantCurrency: params.applyToParticipantCurrency ?? false,
+              applyToGroupPoints: params.applyToGroupPoints ?? false,
+              applyToGroupCurrency: params.applyToGroupCurrency ?? false,
+              note: params.note ?? null,
             },
+            ...totals,
           });
-          participantCorrectionEntryId = created.id;
-        }
-
-        const chunkedGroupSplits = chunkGroupSplits(groupSplits);
-        if (chunkedGroupSplits.length > 0) {
-          const created = await tx.ledgerEntry.create({
-            data: {
-              guildId: params.guildId,
-              type: GROUP_REVERSAL_TYPE,
-              description,
-              createdByUserId: params.actor.userId,
-              createdByUsername: params.actor.username,
-              splits: {
-                create: chunkedGroupSplits.map((split) => ({
-                  groupId: split.groupId,
-                  pointsDelta: decimal(split.pointsDelta),
-                  currencyDelta: decimal(split.currencyDelta),
-                })),
-              },
-            },
-          });
-          groupCorrectionEntryId = created.id;
-        }
-
-        await this.auditService.record({
-          guildId: params.guildId,
-          actorUserId: params.actor.userId,
-          actorUsername: params.actor.username,
-          action: "economy.reset.modulo_balances",
-          entityType: "EconomyReset",
-          payload: {
-            modulus: params.modulus,
-            applyToParticipantCurrency: params.applyToParticipantCurrency ?? false,
-            applyToGroupPoints: params.applyToGroupPoints ?? false,
-            applyToGroupCurrency: params.applyToGroupCurrency ?? false,
-            participantCorrectionEntryId,
-            groupCorrectionEntryId,
-            totalCurrencyDelta,
-            totalPointsDelta,
-            note: params.note ?? null,
-          },
-          executor: tx,
-        });
-      }
 
       return {
         mode: "modulo-balance",
@@ -688,10 +578,8 @@ export class EconomyResetService {
         modulus: params.modulus,
         participantImpact,
         groupImpact,
-        totalCurrencyDelta,
-        totalPointsDelta,
-        participantCorrectionEntryId,
-        groupCorrectionEntryId,
+        ...totals,
+        ...corrections,
       };
     });
   }
@@ -808,79 +696,25 @@ export class EconomyResetService {
         }
       }
 
-      let participantCorrectionEntryId: string | null = null;
-      let groupCorrectionEntryId: string | null = null;
-      const totalCurrencyDelta =
-        participantImpact.reduce((sum, row) => sum + row.delta, 0) +
-        groupImpact.reduce((sum, row) => sum + row.currencyDelta, 0);
-      const totalPointsDelta = groupImpact.reduce((sum, row) => sum + row.pointsDelta, 0);
-
-      if (!params.dryRun) {
-        const description = params.note?.trim()
-          ? params.note.trim()
-          : `Economy reset — rescaled balances by ${params.factor}`;
-
-        const chunkedParticipantSplits = chunkParticipantSplits(participantSplits);
-        if (chunkedParticipantSplits.length > 0) {
-          const created = await tx.participantCurrencyEntry.create({
-            data: {
-              guildId: params.guildId,
-              type: PARTICIPANT_REVERSAL_TYPE,
-              description,
-              createdByUserId: params.actor.userId,
-              createdByUsername: params.actor.username,
-              splits: {
-                create: chunkedParticipantSplits.map((split) => ({
-                  participantId: split.participantId,
-                  currencyDelta: decimal(split.currencyDelta),
-                })),
-              },
+      const totals = sumImpact(participantImpact, groupImpact);
+      const corrections = params.dryRun
+        ? { participantCorrectionEntryId: null, groupCorrectionEntryId: null }
+        : await this.writeResetCorrections(tx, {
+            guildId: params.guildId,
+            actor: params.actor,
+            description: params.note?.trim() || `Economy reset — rescaled balances by ${params.factor}`,
+            participantSplits,
+            groupSplits,
+            auditAction: "economy.reset.rescale_balances",
+            auditPayload: {
+              factor: params.factor,
+              applyToParticipantCurrency: params.applyToParticipantCurrency ?? false,
+              applyToGroupPoints: params.applyToGroupPoints ?? false,
+              applyToGroupCurrency: params.applyToGroupCurrency ?? false,
+              note: params.note ?? null,
             },
+            ...totals,
           });
-          participantCorrectionEntryId = created.id;
-        }
-
-        const chunkedGroupSplits = chunkGroupSplits(groupSplits);
-        if (chunkedGroupSplits.length > 0) {
-          const created = await tx.ledgerEntry.create({
-            data: {
-              guildId: params.guildId,
-              type: GROUP_REVERSAL_TYPE,
-              description,
-              createdByUserId: params.actor.userId,
-              createdByUsername: params.actor.username,
-              splits: {
-                create: chunkedGroupSplits.map((split) => ({
-                  groupId: split.groupId,
-                  pointsDelta: decimal(split.pointsDelta),
-                  currencyDelta: decimal(split.currencyDelta),
-                })),
-              },
-            },
-          });
-          groupCorrectionEntryId = created.id;
-        }
-
-        await this.auditService.record({
-          guildId: params.guildId,
-          actorUserId: params.actor.userId,
-          actorUsername: params.actor.username,
-          action: "economy.reset.rescale_balances",
-          entityType: "EconomyReset",
-          payload: {
-            factor: params.factor,
-            applyToParticipantCurrency: params.applyToParticipantCurrency ?? false,
-            applyToGroupPoints: params.applyToGroupPoints ?? false,
-            applyToGroupCurrency: params.applyToGroupCurrency ?? false,
-            participantCorrectionEntryId,
-            groupCorrectionEntryId,
-            totalCurrencyDelta,
-            totalPointsDelta,
-            note: params.note ?? null,
-          },
-          executor: tx,
-        });
-      }
 
       return {
         mode: "rescale-balances",
@@ -888,10 +722,8 @@ export class EconomyResetService {
         factor: params.factor,
         participantImpact,
         groupImpact,
-        totalCurrencyDelta,
-        totalPointsDelta,
-        participantCorrectionEntryId,
-        groupCorrectionEntryId,
+        ...totals,
+        ...corrections,
       };
     });
   }
@@ -1001,90 +833,111 @@ export class EconomyResetService {
         }
       }
 
-      let participantCorrectionEntryId: string | null = null;
-      let groupCorrectionEntryId: string | null = null;
-      const totalCurrencyDelta =
-        participantImpact.reduce((sum, row) => sum + row.delta, 0) +
-        groupImpact.reduce((sum, row) => sum + row.currencyDelta, 0);
-      const totalPointsDelta = groupImpact.reduce((sum, row) => sum + row.pointsDelta, 0);
-
-      if (!params.dryRun) {
-        const description = params.note?.trim()
-          ? params.note.trim()
-          : `Economy reset — set balances`;
-
-        const chunkedParticipantSplits = chunkParticipantSplits(participantSplits);
-        if (chunkedParticipantSplits.length > 0) {
-          const created = await tx.participantCurrencyEntry.create({
-            data: {
-              guildId: params.guildId,
-              type: PARTICIPANT_REVERSAL_TYPE,
-              description,
-              createdByUserId: params.actor.userId,
-              createdByUsername: params.actor.username,
-              splits: {
-                create: chunkedParticipantSplits.map((split) => ({
-                  participantId: split.participantId,
-                  currencyDelta: decimal(split.currencyDelta),
-                })),
-              },
+      const totals = sumImpact(participantImpact, groupImpact);
+      const corrections = params.dryRun
+        ? { participantCorrectionEntryId: null, groupCorrectionEntryId: null }
+        : await this.writeResetCorrections(tx, {
+            guildId: params.guildId,
+            actor: params.actor,
+            description: params.note?.trim() || "Economy reset — set balances",
+            participantSplits,
+            groupSplits,
+            auditAction: "economy.reset.set_balances",
+            auditPayload: {
+              targetParticipantCurrency: params.targetParticipantCurrency ?? null,
+              targetGroupPoints: params.targetGroupPoints ?? null,
+              targetGroupCurrency: params.targetGroupCurrency ?? null,
+              note: params.note ?? null,
             },
+            ...totals,
           });
-          participantCorrectionEntryId = created.id;
-        }
-
-        const chunkedGroupSplits = chunkGroupSplits(groupSplits);
-        if (chunkedGroupSplits.length > 0) {
-          const created = await tx.ledgerEntry.create({
-            data: {
-              guildId: params.guildId,
-              type: GROUP_REVERSAL_TYPE,
-              description,
-              createdByUserId: params.actor.userId,
-              createdByUsername: params.actor.username,
-              splits: {
-                create: chunkedGroupSplits.map((split) => ({
-                  groupId: split.groupId,
-                  pointsDelta: decimal(split.pointsDelta),
-                  currencyDelta: decimal(split.currencyDelta),
-                })),
-              },
-            },
-          });
-          groupCorrectionEntryId = created.id;
-        }
-
-        await this.auditService.record({
-          guildId: params.guildId,
-          actorUserId: params.actor.userId,
-          actorUsername: params.actor.username,
-          action: "economy.reset.set_balances",
-          entityType: "EconomyReset",
-          payload: {
-            targetParticipantCurrency: params.targetParticipantCurrency ?? null,
-            targetGroupPoints: params.targetGroupPoints ?? null,
-            targetGroupCurrency: params.targetGroupCurrency ?? null,
-            participantCorrectionEntryId,
-            groupCorrectionEntryId,
-            totalCurrencyDelta,
-            totalPointsDelta,
-            note: params.note ?? null,
-          },
-          executor: tx,
-        });
-      }
 
       return {
         mode: "set-balances",
         dryRun: params.dryRun,
         participantImpact,
         groupImpact,
-        totalCurrencyDelta,
-        totalPointsDelta,
-        participantCorrectionEntryId,
-        groupCorrectionEntryId,
+        ...totals,
+        ...corrections,
       };
     });
+  }
+
+  private async writeResetCorrections(
+    tx: Prisma.TransactionClient,
+    params: {
+      guildId: string;
+      actor: ResetActor;
+      description: string;
+      participantSplits: Array<{ participantId: string; currencyDelta: number }>;
+      groupSplits: Array<{ groupId: string; pointsDelta: number; currencyDelta: number }>;
+      auditAction: string;
+      auditPayload: Record<string, unknown>;
+      totalCurrencyDelta: number;
+      totalPointsDelta: number;
+    },
+  ) {
+    let participantCorrectionEntryId: string | null = null;
+    let groupCorrectionEntryId: string | null = null;
+
+    const chunkedParticipantSplits = chunkParticipantSplits(params.participantSplits);
+    if (chunkedParticipantSplits.length > 0) {
+      const created = await tx.participantCurrencyEntry.create({
+        data: {
+          guildId: params.guildId,
+          type: PARTICIPANT_REVERSAL_TYPE,
+          description: params.description,
+          createdByUserId: params.actor.userId,
+          createdByUsername: params.actor.username,
+          splits: {
+            create: chunkedParticipantSplits.map((split) => ({
+              participantId: split.participantId,
+              currencyDelta: decimal(split.currencyDelta),
+            })),
+          },
+        },
+      });
+      participantCorrectionEntryId = created.id;
+    }
+
+    const chunkedGroupSplits = chunkGroupSplits(params.groupSplits);
+    if (chunkedGroupSplits.length > 0) {
+      const created = await tx.ledgerEntry.create({
+        data: {
+          guildId: params.guildId,
+          type: GROUP_REVERSAL_TYPE,
+          description: params.description,
+          createdByUserId: params.actor.userId,
+          createdByUsername: params.actor.username,
+          splits: {
+            create: chunkedGroupSplits.map((split) => ({
+              groupId: split.groupId,
+              pointsDelta: decimal(split.pointsDelta),
+              currencyDelta: decimal(split.currencyDelta),
+            })),
+          },
+        },
+      });
+      groupCorrectionEntryId = created.id;
+    }
+
+    await this.auditService.record({
+      guildId: params.guildId,
+      actorUserId: params.actor.userId,
+      actorUsername: params.actor.username,
+      action: params.auditAction,
+      entityType: "EconomyReset",
+      payload: {
+        ...params.auditPayload,
+        participantCorrectionEntryId,
+        groupCorrectionEntryId,
+        totalCurrencyDelta: params.totalCurrencyDelta,
+        totalPointsDelta: params.totalPointsDelta,
+      },
+      executor: tx,
+    });
+
+    return { participantCorrectionEntryId, groupCorrectionEntryId };
   }
 
   private async fillParticipantBalances(
@@ -1128,6 +981,15 @@ export class EconomyResetService {
       row.currencyAfter = before.currency + row.currencyDelta;
     }
   }
+}
+
+function sumImpact(participantImpact: ParticipantImpact[], groupImpact: GroupImpact[]) {
+  return {
+    totalCurrencyDelta:
+      participantImpact.reduce((sum, row) => sum + row.delta, 0) +
+      groupImpact.reduce((sum, row) => sum + row.currencyDelta, 0),
+    totalPointsDelta: groupImpact.reduce((sum, row) => sum + row.pointsDelta, 0),
+  };
 }
 
 function mergeParticipantSplits(
