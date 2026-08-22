@@ -20,7 +20,7 @@ import {
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type GuildTextBasedChannel,
-  type GuildMember,
+  GuildMember,
   type Message,
   type MessageReaction,
   type PartialMessageReaction,
@@ -478,7 +478,9 @@ export class BotRuntime {
         return;
       }
 
-      const member = await message.member?.fetch().catch(() => null);
+      const member = await this.resolveGuildMember(message.member, () =>
+        message.member ? message.member.fetch() : Promise.resolve(null),
+      );
       if (!member) {
         return;
       }
@@ -527,80 +529,26 @@ export class BotRuntime {
         return;
       }
 
-      if (interaction.isButton() && interaction.customId.startsWith("redemption:")) {
-        try {
-          await this.handleRedemptionButton(interaction);
-        } catch (error) {
-          console.error("Redemption button handling failed", error);
-          const message = error instanceof AppError ? error.message : "Unexpected button error.";
+      if (interaction.isButton()) {
+        const buttonHandler = this.buttonHandlerFor(interaction.customId);
+        if (buttonHandler) {
           try {
-            if (interaction.replied || interaction.deferred) {
-              await interaction.editReply({ content: message });
-            } else {
-              await interaction.reply({ content: message, ephemeral: true });
+            await buttonHandler(interaction);
+          } catch (error) {
+            console.error("Button handling failed", { customId: interaction.customId, error });
+            const message = error instanceof AppError ? error.message : "Unexpected button error.";
+            try {
+              if (interaction.replied || interaction.deferred) {
+                await interaction.editReply({ content: message });
+              } else {
+                await interaction.reply({ content: message, ephemeral: true });
+              }
+            } catch (replyError) {
+              console.error("Failed to send button error response", replyError);
             }
-          } catch (replyError) {
-            console.error("Failed to send button error response", replyError);
           }
+          return;
         }
-        return;
-      }
-
-      if (interaction.isButton() && interaction.customId.startsWith("luckydraw:")) {
-        try {
-          await this.handleLuckyDrawButton(interaction);
-        } catch (error) {
-          console.error("Lucky draw button handling failed", error);
-          const message = error instanceof AppError ? error.message : "Unexpected button error.";
-          try {
-            if (interaction.replied || interaction.deferred) {
-              await interaction.editReply({ content: message });
-            } else {
-              await interaction.reply({ content: message, ephemeral: true });
-            }
-          } catch (replyError) {
-            console.error("Failed to send button error response", replyError);
-          }
-        }
-        return;
-      }
-
-      if (interaction.isButton() && interaction.customId.startsWith("submission:")) {
-        try {
-          await this.handleSubmissionButton(interaction);
-        } catch (error) {
-          console.error("Submission button handling failed", error);
-          const message = error instanceof AppError ? error.message : "Unexpected button error.";
-          try {
-            if (interaction.replied || interaction.deferred) {
-              await interaction.editReply({ content: message });
-            } else {
-              await interaction.reply({ content: message, ephemeral: true });
-            }
-          } catch (replyError) {
-            console.error("Failed to send button error response", replyError);
-          }
-        }
-        return;
-      }
-
-      if (interaction.isButton() && interaction.customId.startsWith(`${PAGINATION_VERSION}:page:`)) {
-        try {
-          await this.handlePaginationButton(interaction);
-        } catch (error) {
-          console.error("Pagination button handling failed", error);
-          const message = error instanceof AppError ? error.message : "Unexpected button error.";
-          try {
-            if (interaction.replied || interaction.deferred) {
-              await interaction.editReply({ content: message });
-            } else {
-              await interaction.reply({ content: message, ephemeral: true });
-            }
-          } catch (replyError) {
-            console.error("Failed to send button error response", replyError);
-          }
-        }
-        return;
       }
 
       if (!interaction.isChatInputCommand()) {
@@ -639,6 +587,34 @@ export class BotRuntime {
 
     await message.reply("I am a helpful points bot.").catch(() => {});
     return true;
+  }
+
+  private async resolveGuildMember(
+    member: GuildMember | null | undefined,
+    fetchMember: () => Promise<GuildMember | null>,
+  ): Promise<GuildMember | null> {
+    if (member && !member.partial) {
+      return member;
+    }
+    return fetchMember().catch(() => null);
+  }
+
+  private buttonHandlerFor(
+    customId: string,
+  ): ((interaction: ButtonInteraction) => Promise<void>) | null {
+    if (customId.startsWith("redemption:")) {
+      return (interaction) => this.handleRedemptionButton(interaction);
+    }
+    if (customId.startsWith("luckydraw:")) {
+      return (interaction) => this.handleLuckyDrawButton(interaction);
+    }
+    if (customId.startsWith("submission:")) {
+      return (interaction) => this.handleSubmissionButton(interaction);
+    }
+    if (customId.startsWith(`${PAGINATION_VERSION}:page:`)) {
+      return (interaction) => this.handlePaginationButton(interaction);
+    }
+    return null;
   }
 
   public async stop() {
@@ -3972,7 +3948,10 @@ export class BotRuntime {
       return;
     }
 
-    const member = await interaction.guild?.members.fetch(interaction.user.id);
+    const member = await this.resolveGuildMember(
+      interaction.member instanceof GuildMember ? interaction.member : null,
+      async () => (await interaction.guild?.members.fetch(interaction.user.id)) ?? null,
+    );
     const roleIds = this.getOrderedRoleIds(member ?? null);
     const actor = {
       userId: interaction.user.id,
